@@ -44,9 +44,8 @@ export class DeepSeekProvider implements LLMProvider {
       })
 
       if (!response.ok) {
-        const errorText = await response.text()
         return {
-          content: '',
+          content: `HTTP ${response.status}: ${response.statusText}`,
           finishReason: 'error',
         }
       }
