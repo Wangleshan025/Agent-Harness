@@ -13,6 +13,15 @@ export async function handleEditFile(params: Record<string, unknown>): Promise<O
 
   const resolvedPath = resolve(process.cwd(), path)
   const normalizedPath = normalize(resolvedPath)
+  const cwd = normalize(process.cwd())
+
+  if (!normalizedPath.startsWith(cwd)) {
+    return {
+      actionId: '', success: false, output: '',
+      error: `Security: path "${path}" is outside the project directory`,
+      timestamp: Date.now(),
+    }
+  }
 
   try {
     const content = await readFile(normalizedPath, 'utf-8')
