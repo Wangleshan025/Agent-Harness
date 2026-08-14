@@ -1,0 +1,6 @@
+node_modules/
+dist/
+*.enc
+.git/
+coverage/
+tests/
