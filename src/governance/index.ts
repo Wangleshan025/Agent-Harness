@@ -1,0 +1,1 @@
+export { checkStaticRules } from './static-rules.js'
