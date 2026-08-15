@@ -18,6 +18,7 @@ interface LogEntry {
 export default function TaskRunner() {
   const [task, setTask] = useState('')
   const [mock, setMock] = useState(true)
+  const [apiKey, setApiKey] = useState(() => localStorage.getItem('harness_api_key') || '')
   const [running, setRunning] = useState(false)
   const [logs, setLogs] = useState<LogEntry[]>([])
   const [result, setResult] = useState<Record<string, unknown> | null>(null)
@@ -30,6 +31,20 @@ export default function TaskRunner() {
 
   const handleRun = () => {
     if (!task.trim() || running) return
+    if (!mock && !apiKey.trim()) {
+      setLogs(prev => [...prev, {
+        id: `error-${Date.now()}`,
+        type: 'error',
+        content: '请先输入 DeepSeek API Key',
+        timestamp: Date.now(),
+      }])
+      return
+    }
+
+    // Save API key to localStorage for persistence
+    if (apiKey) {
+      localStorage.setItem('harness_api_key', apiKey)
+    }
 
     setRunning(true)
     setLogs([])
@@ -92,6 +107,7 @@ export default function TaskRunner() {
         }])
         setRunning(false)
       },
+      apiKey,
     )
   }
 
@@ -133,9 +149,21 @@ export default function TaskRunner() {
               <span className="toggle-text">{mock ? '🔁 模拟模式' : '🤖 真实 LLM'}</span>
             </label>
             {!mock && (
-              <span className="mode-hint">需先在凭据管理配置 API Key</span>
+              <span className="mode-hint">需先配置 DeepSeek API Key</span>
             )}
           </div>
+          {!mock && (
+            <div className="task-api-key-row">
+              <input
+                type="password"
+                className="task-api-key-input"
+                placeholder="输入 DeepSeek API Key (sk-...)"
+                value={apiKey}
+                onChange={e => setApiKey(e.target.value)}
+                disabled={running}
+              />
+            </div>
+          )}
           <div className="task-action-buttons">
             <span className="task-hint">Ctrl+Enter 运行</span>
             {running ? (

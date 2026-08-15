@@ -40,9 +40,37 @@
 
 .task-actions {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: flex-start;
   margin-top: 8px;
+}
+
+.task-api-key-row {
+  flex: 1 1 100%;
+  margin-top: 4px;
+}
+
+.task-api-key-input {
+  width: 100%;
+  padding: 8px 12px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-family: var(--font-mono, monospace);
+  outline: none;
+  transition: border-color 0.15s;
+  box-sizing: border-box;
+}
+
+.task-api-key-input:focus {
+  border-color: var(--color-info);
+}
+
+.task-api-key-input:disabled {
+  opacity: 0.6;
 }
 
 .task-mode-toggle {

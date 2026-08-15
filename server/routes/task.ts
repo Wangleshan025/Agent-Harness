@@ -76,14 +76,15 @@ async function runRealAgent(
   task: string,
   write: (data: unknown) => void,
   signal: AbortSignal,
+  directApiKey?: string,
 ): Promise<void> {
-  // 1. Read API key
-  let apiKey = cachedApiKey
+  // 1. Read API key (direct param > cached > credential manager)
+  let apiKey = directApiKey || cachedApiKey
   if (!apiKey) {
     apiKey = await credentialManager.getKey()
   }
   if (!apiKey) {
-    write({ type: 'thought', data: { content: '❌ 未找到 API Key。请先在凭据管理页面配置 DeepSeek API Key。' } })
+    write({ type: 'thought', data: { content: '❌ 未找到 API Key。请先在凭据管理页面配置 DeepSeek API Key，或在任务运行器直接输入。' } })
     write({ type: 'result', data: { status: 'failed', summary: 'Missing API Key' } })
     return
   }
@@ -176,7 +177,7 @@ async function runRealAgent(
 }
 
 taskRouter.post('/run', async (req: Request, res: Response) => {
-  const { task, mock } = req.body as { task?: string; mock?: boolean }
+  const { task, mock, apiKey } = req.body as { task?: string; mock?: boolean; apiKey?: string }
 
   if (!task) {
     res.status(400).json({ error: 'Missing required field: task' })
@@ -204,7 +205,7 @@ taskRouter.post('/run', async (req: Request, res: Response) => {
   } else {
     // Real execution — dispatches to HarnessX core agent loop
     const abortSignal = req.signal || new AbortController().signal
-    await runRealAgent(task, writeEvent, abortSignal)
+    await runRealAgent(task, writeEvent, abortSignal, apiKey)
   }
 
   res.end()
