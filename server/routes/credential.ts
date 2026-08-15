@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express'
 import { CredentialManager } from '../../src/config/credential-manager.js'
+import { setCachedApiKey } from './task.js'
 
 export const credentialRouter = Router()
 
@@ -17,6 +18,7 @@ credentialRouter.post('/init', async (req: Request, res: Response) => {
 
   try {
     await credentialManager.init(apiKey)
+    setCachedApiKey(apiKey)
     res.json({ success: true, message: 'Credential initialized' })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
@@ -33,6 +35,7 @@ credentialRouter.post('/update', async (req: Request, res: Response) => {
 
   try {
     await credentialManager.update(apiKey)
+    setCachedApiKey(apiKey)
     res.json({ success: true, message: 'Credential updated' })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
@@ -43,6 +46,7 @@ credentialRouter.post('/update', async (req: Request, res: Response) => {
 credentialRouter.post('/clear', async (_req: Request, res: Response) => {
   try {
     await credentialManager.clear()
+    setCachedApiKey(null)
     res.json({ success: true, message: 'Credential cleared' })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'

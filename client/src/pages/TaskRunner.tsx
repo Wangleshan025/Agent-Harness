@@ -9,7 +9,7 @@ interface StreamEvent {
 
 interface LogEntry {
   id: string
-  type: 'thought' | 'guardrail' | 'observation' | 'complete' | 'error'
+  type: 'thought' | 'guardrail' | 'action' | 'observation' | 'complete' | 'error' | 'result'
   content: string
   timestamp: number
   meta?: Record<string, unknown>
@@ -17,6 +17,7 @@ interface LogEntry {
 
 export default function TaskRunner() {
   const [task, setTask] = useState('')
+  const [mock, setMock] = useState(true)
   const [running, setRunning] = useState(false)
   const [logs, setLogs] = useState<LogEntry[]>([])
   const [result, setResult] = useState<Record<string, unknown> | null>(null)
@@ -36,7 +37,7 @@ export default function TaskRunner() {
 
     controllerRef.current = createTaskStream(
       task,
-      true,
+      mock,
       (event: StreamEvent) => {
         const { type, data } = event
         const entry: LogEntry = {
@@ -51,17 +52,28 @@ export default function TaskRunner() {
           case 'thought':
             entry.content = String((data as Record<string, unknown>).content || '')
             break
-          case 'guardrail':
-            entry.content = `护栏: ${(data as Record<string, unknown>).action === 'allow' ? '✅ 允许' : '❌ 拦截'} · ${(data as Record<string, unknown>).reason || ''}`
+          case 'guardrail': {
+            const d = data as Record<string, unknown>
+            entry.content = `护栏: ${d.action === 'allow' ? '✅ 允许' : '❌ 拦截'} · ${d.reason || ''}`
             break
-          case 'observation':
-            entry.content = String((data as Record<string, unknown>).output || '')
+          }
+          case 'action': {
+            const d = data as Record<string, unknown>
+            entry.content = `执行操作: ${d.action} ${JSON.stringify(d.params || {})}`
             break
-          case 'complete':
-            entry.content = (data as Record<string, unknown>).success ? '✅ 任务完成' : '❌ 任务失败'
-            setResult(data as Record<string, unknown>)
+          }
+          case 'observation': {
+            const d = data as Record<string, unknown>
+            entry.content = String(d.output || '')
+            break
+          }
+          case 'result': {
+            const d = data as Record<string, unknown>
+            entry.content = d.status === 'completed' ? '✅ 任务完成' : d.status === 'failed' ? '❌ 任务失败' : d.status === 'blocked' ? '❌ 被护栏拦截' : `⚠️ ${d.status || '未知'}`
+            setResult(d as Record<string, unknown>)
             setRunning(false)
             break
+          }
           default:
             entry.content = JSON.stringify(data)
         }
@@ -110,16 +122,32 @@ export default function TaskRunner() {
           disabled={running}
         />
         <div className="task-actions">
-          <span className="task-hint">Ctrl+Enter 运行</span>
-          {running ? (
-            <button className="btn btn-danger" onClick={handleStop}>
-              ⏹ 停止
-            </button>
-          ) : (
-            <button className="btn btn-primary" onClick={handleRun} disabled={!task.trim()}>
-              ▶ 运行
-            </button>
-          )}
+          <div className="task-mode-toggle">
+            <label className="toggle-label">
+              <input
+                type="checkbox"
+                checked={!mock}
+                onChange={e => setMock(!e.target.checked)}
+                disabled={running}
+              />
+              <span className="toggle-text">{mock ? '🔁 模拟模式' : '🤖 真实 LLM'}</span>
+            </label>
+            {!mock && (
+              <span className="mode-hint">需先在凭据管理配置 API Key</span>
+            )}
+          </div>
+          <div className="task-action-buttons">
+            <span className="task-hint">Ctrl+Enter 运行</span>
+            {running ? (
+              <button className="btn btn-danger" onClick={handleStop}>
+                ⏹ 停止
+              </button>
+            ) : (
+              <button className="btn btn-primary" onClick={handleRun} disabled={!task.trim()}>
+                ▶ 运行
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -145,10 +173,13 @@ export default function TaskRunner() {
               {entry.type === 'guardrail' && (
                 <div className="log-guardrail">{entry.content}</div>
               )}
+              {entry.type === 'action' && (
+                <div className="log-action">🔧 {entry.content}</div>
+              )}
               {entry.type === 'observation' && (
                 <pre className="log-observation">{entry.content}</pre>
               )}
-              {entry.type === 'complete' && (
+              {(entry.type === 'complete' || entry.type === 'result') && (
                 <div className="log-complete">{entry.content}</div>
               )}
               {entry.type === 'error' && (
@@ -175,17 +206,17 @@ export default function TaskRunner() {
           <div className="result-grid">
             <div className="result-item">
               <span className="result-label">状态</span>
-              <span className={`result-value ${result.success ? 'text-success' : 'text-danger'}`}>
-                {result.success ? '成功' : '失败'}
+              <span className={`result-value ${result.status === 'completed' ? 'text-success' : 'text-danger'}`}>
+                {String(result.status)}
               </span>
             </div>
             <div className="result-item">
               <span className="result-label">迭代次数</span>
-              <span className="result-value">{String(result.totalIterations)}</span>
+              <span className="result-value">{String(result.totalIterations || '—')}</span>
             </div>
             <div className="result-item result-full">
               <span className="result-label">摘要</span>
-              <span className="result-value">{String(result.summary)}</span>
+              <span className="result-value">{String(result.summary || '')}</span>
             </div>
           </div>
         </div>

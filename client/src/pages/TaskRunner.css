@@ -45,6 +45,78 @@
   margin-top: 8px;
 }
 
+.task-mode-toggle {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.toggle-label input[type="checkbox"] {
+  width: 40px;
+  height: 22px;
+  appearance: none;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 11px;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.toggle-label input[type="checkbox"]::before {
+  content: '';
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  top: 1px;
+  left: 1px;
+  transition: all 0.2s;
+}
+
+.toggle-label input[type="checkbox"]:checked {
+  background: var(--color-info);
+  border-color: var(--color-info);
+}
+
+.toggle-label input[type="checkbox"]:checked::before {
+  left: 19px;
+  background: #fff;
+}
+
+.toggle-label input[type="checkbox"]:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.toggle-text {
+  font-size: 14px;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.mode-hint {
+  font-size: 11px;
+  color: var(--color-warning);
+  margin-left: 48px;
+}
+
+.task-action-buttons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .task-hint {
   color: var(--text-muted);
   font-size: 12px;
@@ -158,6 +230,13 @@
 .log-guardrail {
   color: var(--color-warning);
   padding: 4px 0;
+}
+
+.log-action {
+  color: var(--color-info);
+  padding: 4px 0;
+  font-family: var(--font-mono);
+  font-size: 13px;
 }
 
 .log-observation {
