@@ -5,9 +5,20 @@
 ## 快速开始
 
 ```bash
-npm install -g harnessx
-harnessx cred init          # 首次：配置 API Key
-harnessx run "为这个函数添加单元测试"    # 运行任务
+# 克隆并安装依赖
+git clone <repo-url>
+cd harnessx
+npm install
+
+# 配置 API Key（可选，首次使用）
+npx tsx src/cli.ts cred init
+
+# 运行任务（模拟模式）
+npx tsx src/cli.ts run "为 utils.ts 添加排序函数" --mock
+
+# 运行任务（真实 AI 模式，需先配置 DEEPSEEK_API_KEY）
+export DEEPSEEK_API_KEY=sk-...
+npx tsx src/cli.ts run "为 utils.ts 添加排序函数"
 ```
 
 ## 功能
