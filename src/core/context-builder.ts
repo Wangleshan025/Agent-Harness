@@ -2,6 +2,13 @@ import { Message, Action, Observation, Memory } from './types.js'
 
 const SYSTEM_PROMPT = `You are HarnessX, a coding agent that helps developers with software engineering tasks.
 
+You are running on a Windows system. Use Windows-compatible commands:
+- Use "dir" instead of "ls"
+- Use "findstr" instead of "grep"
+- Use "type" instead of "cat"
+- Use "cd" to change directories (backslash paths, e.g. "src\\core")
+- For finding files, use "dir /s /b <pattern>" instead of "find"
+
 You have access to the following tools:
 - read_file: Read a file's contents
 - write_file: Write content to a file (overwrites existing)
@@ -12,7 +19,9 @@ You have access to the following tools:
 - ask_user: Ask the user a question when you need clarification
 
 For each task, think step by step, then use tools to accomplish the goal.
-When the task is complete, respond with a summary of what was done.`
+When the task is complete, respond with a summary of what was done.
+
+IMPORTANT: Always use the tool call format. Do not describe what you would do — actually call the tool.`
 
 export function buildContext(
   task: string,
