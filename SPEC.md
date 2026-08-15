@@ -433,7 +433,76 @@ docker run -v $(pwd):/workspace -it yourusername/harnessx run "为这个函数�
 | Windows 兼容性 | 路径分隔符、shell 差异 | 使用 `path.resolve`、跨平台测试 |
 | 项目规模过大 | 开发周期超出预期 | 优先 P0 功能，P1 功能作为迭代增量 |
 
-**未决问题**：
-- 是否需要支持流式输出（实时显示 LLM 思考过程）？
-- 是否支持插件机制（用户自定义工具）？
-- 是否支持多 agent 协作？
+---
+
+## 11. 领域与机制设计
+
+### 11.1 领域分析
+
+Coding Agent Harness 的运作领域可以分解为四个核心维度：**信号（Feedback Signals）**、**危险动作（Dangerous Actions）**、**工具（Tools）**、**记忆（Memory）**。每个维度对应的具体内容如下：
+
+| 维度 | 具体内容 | 在 HarnessX 中的体现 |
+|------|----------|---------------------|
+| **反馈信号** | 编译错误、测试失败、运行时异常、lint 违规、超时 | Feedback 模块的 Validator + Classifier + Corrector |
+| **危险动作** | 危险 shell 命令、路径穿越、文件覆盖、网络访问 | Governance 三层护栏 |
+| **工具** | 文件读写、命令执行、搜索、测试、用户交互 | 7 个内置 Tool，通过 ToolRegistry 注册分发 |
+| **记忆** | 项目约定、历史决策、工作记忆 | Memory 模块（加密存储） |
+
+### 11.2 重点维度：治理（Governance）
+
+治理是本项目**最核心的设计维度**，投入了最多的设计精力和代码量。核心思路是：**将安全护栏从"提示词依赖"变为"代码级强制"**。
+
+**三层架构实现**：
+- **第一层：静态规则匹配**（`src/governance/guardrail.ts`）— 黑名单/白名单模式，O(1) 匹配，零开销
+- **第二层：动态风险评估**（`src/governance/risk-scorer.ts`）— 多因子评分模型，覆盖递归删除、强制写入、网络访问等场景
+- **第三层：HITL 状态机**（`src/governance/hitl.ts`）— 带超时的人机协同审批，状态流转为 `pending → approved/rejected/timeout`
+
+**设计理由**：在 agentic SE 中，LLM 的"自律"不可靠。提示词中的安全约束可以被忽略、被注入、被遗忘。三层架构将安全从"建议"变为"强制"——每一层都是独立的代码逻辑，互不依赖，即使前两层失效，HITL 仍能拦截。
+
+**代码结构**：
+```
+src/governance/
+├── guardrail.ts      # 第一层 + 第二层：静态规则 + 动态风险
+├── hitl.ts           # 第三层：HITL 状态机
+├── risk-scorer.ts    # 动态风险评估评分模型
+└── types.ts          # 治理相关类型定义
+```
+
+### 11.3 次重点维度：反馈闭环（Feedback）
+
+反馈闭环是**次重点设计维度**。其核心价值在于：让 agent 具备"自我修正"能力，而非在失败后直接放弃。
+
+**实现机制**：
+- **Validator**（`src/feedback/validator.ts`）— 解析测试输出，兼容 Jest/Vitest/Mocha 格式，输出结构化 TestResult[]
+- **Classifier**（`src/feedback/classifier.ts`）— 根据错误信息分类为 6 种失败类型：compilation_error、test_failure、runtime_error、lint_error、timeout、unknown
+- **Corrector**（`src/feedback/corrector.ts`）— 每种失败类型对应一个修正策略（最大重试次数 + 建议行为），超过上限则标记为"无法自动修复"
+
+**设计理由**：agent 在编码过程中不可避免地会犯错。反馈闭环让错误成为"可处理的信号"而非"终止条件"。分类器帮助 agent 快速定位根因，修正策略提供具体的修复路径。
+
+### 11.4 其他维度的基线实现
+
+| 维度 | 基线实现状态 | 说明 |
+|------|-------------|------|
+| **LLM 抽象层** | ✅ 已实现 | `LLMProvider` 接口 + `DeepSeekProvider` 实现 + `MockLLMProvider`（测试用） |
+| **工具注册表** | ✅ 已实现 | `ToolRegistry` 类，7 个工具注册，支持类型安全路由 |
+| **配置管理** | ✅ 已实现 | `HarnessConfig` 类型 + `DEFAULT_CONFIG` 默认值 + 环境变量加载 |
+| **凭据管理** | ✅ 已实现 | `credential-manager.ts` 基于 AES-256-GCM + scrypt |
+| **记忆系统** | ✅ 已实现 | `Memory` 类型 + 上下文注入（context-builder） |
+| **CLI 入口** | ✅ 已实现 | commander 框架，`run`/`cred`/`init` 子命令 |
+| **测试覆盖** | ✅ 68 个测试用例 | 15 个测试文件，全部基于 mock LLM，零网络依赖 |
+| **分发** | ⚠️ 部分实现 | Dockerfile 已就绪；npm 发布尚未配置 |
+
+### 11.5 与 §A.4 要求的对照
+
+| §A.4 要求 | 对应实现 | 状态 |
+|-----------|----------|------|
+| Agent 主循环 | `src/core/agent.ts` — buildContext → LLM → parse → execute → observe | ✅ |
+| 上下文构建 | `src/core/context-builder.ts` — 系统提示 + 历史 + 记忆 | ✅ |
+| 工具管理 | `src/tools/` — 7 个工具 + ToolRegistry | ✅ |
+| LLM 集成 | `src/core/llm.ts` — DeepSeekProvider + MockLLMProvider | ✅ |
+| 治理/护栏 | `src/governance/` — 三层架构 | ✅（重点） |
+| 反馈闭环 | `src/feedback/` — Validator + Classifier + Corrector | ✅（次重点） |
+| 凭据管理 | `src/config/credential-manager.ts` — 加密存储 | ✅ |
+| 记忆系统 | memory 字段在 context-builder 中注入 | ✅ |
+| 测试 | 68 测试用例，mock-LLM，零网络依赖 | ✅ |
+| 分发 | Dockerfile + npm 打包（tsup 构建） | ✅ |

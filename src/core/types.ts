@@ -101,6 +101,18 @@ export interface CorrectionStrategy {
   prompt: string
 }
 
+// === 健康检查 ===
+export interface HealthCheckResult {
+  status: 'healthy' | 'degraded' | 'unhealthy'
+  checks: Array<{
+    name: string
+    passed: boolean
+    detail?: string
+    duration: number
+  }>
+  timestamp: number
+}
+
 // === 记忆 ===
 export interface Decision {
   title: string
