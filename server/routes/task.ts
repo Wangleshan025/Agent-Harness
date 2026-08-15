@@ -77,6 +77,7 @@ async function runRealAgent(
   write: (data: unknown) => void,
   signal: AbortSignal,
   directApiKey?: string,
+  directBaseUrl?: string,
 ): Promise<void> {
   // 1. Read API key (direct param > cached > credential manager)
   let apiKey = directApiKey || cachedApiKey
@@ -89,8 +90,8 @@ async function runRealAgent(
     return
   }
 
-  // 2. Create LLM provider
-  const llm = new DeepSeekProvider({ apiKey })
+  // 2. Create LLM provider (use direct URL if provided, otherwise default from DeepSeekProvider)
+  const llm = new DeepSeekProvider({ apiKey, baseUrl: directBaseUrl })
 
   // 3. Create tool registry
   const tools = buildToolRegistry()
@@ -102,6 +103,7 @@ async function runRealAgent(
   const agent = new Agent(llm)
   let turns = 0
   const maxIter = DEFAULT_CONFIG.maxIterations
+  const fileChanges: Array<{ path: string; action: string; content?: string }> = []
 
   write({ type: 'thought', data: { content: `🚀 开始执行任务: "${task}"` } })
 
@@ -151,7 +153,7 @@ async function runRealAgent(
     if (!action) {
       // No action — task is complete
       write({ type: 'thought', data: { content: '✅ Agent 认为任务已完成，没有更多操作需要执行。' } })
-      write({ type: 'result', data: { status: 'completed', summary: content.slice(0, 300) || 'Task completed', totalIterations: turns } })
+      write({ type: 'result', data: { status: 'completed', summary: content.slice(0, 300) || 'Task completed', totalIterations: turns, fileChanges } })
       return
     }
 
@@ -169,6 +171,19 @@ async function runRealAgent(
     // 5d. Execute tool
     const observation = await tools.execute(action)
     write({ type: 'observation', data: { actionId: action.id, success: observation.success, output: (observation.output || observation.error || '').slice(0, 1000) } })
+
+    // 5e. Track file changes (write_file, edit_file)
+    if (action.type === 'write_file' || action.type === 'edit_file') {
+      const path = String(action.params.path || action.params.file || '')
+      if (path) {
+        fileChanges.push({
+          path,
+          action: action.type === 'write_file' ? 'create' : 'edit',
+          content: (observation.output || '').slice(0, 500),
+        })
+      }
+    }
+
     turns++
   }
 
@@ -177,7 +192,7 @@ async function runRealAgent(
 }
 
 taskRouter.post('/run', async (req: Request, res: Response) => {
-  const { task, mock, apiKey } = req.body as { task?: string; mock?: boolean; apiKey?: string }
+  const { task, mock, apiKey, baseUrl } = req.body as { task?: string; mock?: boolean; apiKey?: string; baseUrl?: string }
 
   if (!task) {
     res.status(400).json({ error: 'Missing required field: task' })
@@ -205,7 +220,7 @@ taskRouter.post('/run', async (req: Request, res: Response) => {
   } else {
     // Real execution — dispatches to HarnessX core agent loop
     const abortSignal = req.signal || new AbortController().signal
-    await runRealAgent(task, writeEvent, abortSignal, apiKey)
+    await runRealAgent(task, writeEvent, abortSignal, apiKey, baseUrl)
   }
 
   res.end()

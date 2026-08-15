@@ -19,7 +19,7 @@ export class DeepSeekProvider implements LLMProvider {
 
   constructor(config: DeepSeekConfig) {
     this.apiKey = config.apiKey
-    this.baseUrl = config.baseUrl ?? 'https://api.njusehub.info/v1'
+    this.baseUrl = config.baseUrl ?? 'https://api.deepseek.com/v1'
     this.model = config.model ?? 'deepseek-chat'
     this.timeout = config.timeout ?? 60_000
   }

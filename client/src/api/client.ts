@@ -29,13 +29,14 @@ export function createTaskStream(
   onComplete: () => void,
   onError: (err: Error) => void,
   apiKey?: string,
+  baseUrl?: string,
 ): AbortController {
   const controller = new AbortController()
 
   fetch(`${API_BASE}/task/run`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ task, mock, apiKey }),
+    body: JSON.stringify({ task, mock, apiKey, baseUrl }),
     signal: controller.signal,
   }).then(async response => {
     if (!response.ok) {

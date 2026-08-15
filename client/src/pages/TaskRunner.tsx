@@ -19,6 +19,7 @@ export default function TaskRunner() {
   const [task, setTask] = useState('')
   const [mock, setMock] = useState(true)
   const [apiKey, setApiKey] = useState(() => localStorage.getItem('harness_api_key') || '')
+  const [baseUrl, setBaseUrl] = useState(() => localStorage.getItem('harness_base_url') || 'https://api.deepseek.com/v1')
   const [running, setRunning] = useState(false)
   const [logs, setLogs] = useState<LogEntry[]>([])
   const [result, setResult] = useState<Record<string, unknown> | null>(null)
@@ -41,10 +42,11 @@ export default function TaskRunner() {
       return
     }
 
-    // Save API key to localStorage for persistence
+    // Save API key and base URL to localStorage for persistence
     if (apiKey) {
       localStorage.setItem('harness_api_key', apiKey)
     }
+    localStorage.setItem('harness_base_url', baseUrl)
 
     setRunning(true)
     setLogs([])
@@ -108,6 +110,7 @@ export default function TaskRunner() {
         setRunning(false)
       },
       apiKey,
+      baseUrl,
     )
   }
 
@@ -161,6 +164,15 @@ export default function TaskRunner() {
                 value={apiKey}
                 onChange={e => setApiKey(e.target.value)}
                 disabled={running}
+              />
+              <input
+                type="text"
+                className="task-api-key-input"
+                placeholder="API 地址 (默认: https://api.deepseek.com/v1)"
+                value={baseUrl}
+                onChange={e => setBaseUrl(e.target.value)}
+                disabled={running}
+                style={{ marginTop: 6 }}
               />
             </div>
           )}
@@ -246,6 +258,27 @@ export default function TaskRunner() {
               <span className="result-label">摘要</span>
               <span className="result-value">{String(result.summary || '')}</span>
             </div>
+            {(() => {
+                const fc = result.fileChanges
+                if (Array.isArray(fc) && fc.length > 0) {
+                  return (
+                    <div className="result-item result-full">
+                      <span className="result-label">📄 文件变更</span>
+                      <div className="file-changes-list">
+                        {(fc as Array<{ path: string; action: string }>).map((f, i) => (
+                          <div key={i} className="file-change-item">
+                            <span className={`file-change-badge ${f.action === 'create' ? 'badge-create' : 'badge-edit'}`}>
+                              {f.action === 'create' ? '新建' : '修改'}
+                            </span>
+                            <code className="file-change-path">{f.path}</code>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                }
+                return null
+              })()}
           </div>
         </div>
       )}
