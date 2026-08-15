@@ -1,0 +1,9 @@
+{
+  "build": {
+    "command": "cd client && npm install && npm run build && cd ../server && npm install",
+    "outputDir": "server"
+  },
+  "start": {
+    "command": "npx tsx server/index.ts"
+  }
+}
