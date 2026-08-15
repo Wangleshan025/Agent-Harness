@@ -1,6 +1,6 @@
 # HarnessX Web UI Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **Status:** ✅ All tasks completed. See commit hashes below.
 
 **Goal:** Build a React-based Web UI for HarnessX that provides intuitive visual access to all core mechanisms (task running, governance, feedback, credentials, demo, system status).
 
@@ -36,11 +36,9 @@
 - Create: `client/src/App.css`
 - Create: `client/src/vite-env.d.ts`
 
-**Interfaces:**
-- Consumes: nothing
-- Produces: Vite dev server, `<App />` root component
+✅ **Task 1 completed** at `3cbf63a` — feat: add client scaffolding (Vite + React + TypeScript)
 
-- [ ] **Step 1: Create `client/package.json`**
+- [x] **Step 1: Create `client/package.json`**
 
 ```json
 {
@@ -271,6 +269,8 @@ cd client && npm install
 Run: `cd client && npx vite --host 0.0.0.0`
 Expected: Vite dev server starts on port 5173 with no errors
 
+✅ **Task 1 completed** at `3cbf63a` — feat: add client scaffolding (Vite + React + TypeScript)
+
 ---
 
 ### Task 2: Server Scaffolding (Express + API Shell)
@@ -430,6 +430,8 @@ cd server && npm install
 
 Run: `cd server && npx tsx index.ts`
 Expected: "HarnessX Web UI server running at http://localhost:3000"
+
+✅ **Task 2 completed** at `52f8798` — feat: add server scaffolding (Express + API route placeholders)
 
 ---
 
@@ -599,6 +601,8 @@ export default function Layout({ children }: LayoutProps) {
 
 Run: `cd client && npx tsc --noEmit`
 Expected: No TypeScript errors
+
+✅ **Task 3 completed** at `425e920` — feat: add layout and navigation components
 
 ---
 
@@ -1080,6 +1084,8 @@ curl -s http://localhost:3000/api/status
 
 Expected: All endpoints return valid JSON
 
+✅ **Task 4 completed** at `a012bdf` — feat: add API client and server route implementations
+
 ---
 
 ### Task 5: Task Runner Page
@@ -1542,6 +1548,8 @@ export default function TaskRunner() {
 }
 ```
 
+✅ **Task 5 completed** at `18587d5` — feat: add all 6 page components (Task Runner, Governance, Feedback, Demo, Credentials, System Status)
+
 ---
 
 ### Task 6: Governance Page
@@ -1901,6 +1909,8 @@ export default function Governance() {
 }
 ```
 
+✅ **Task 6 completed** at `18587d5` — feat: add all 6 page components
+
 ---
 
 ### Task 7: Feedback Page
@@ -2222,6 +2232,8 @@ export default function Feedback() {
 }
 ```
 
+✅ **Task 7 completed** at `18587d5` — feat: add all 6 page components
+
 ---
 
 ### Task 8: Demo Page
@@ -2478,6 +2490,8 @@ export default function Demo() {
   padding: 4px 0;
 }
 ```
+
+✅ **Task 8 completed** at `18587d5` — feat: add all 6 page components
 
 ---
 
@@ -2800,6 +2814,8 @@ export default function SystemStatus() {
 }
 ```
 
+✅ **Task 9 completed** at `18587d5` — feat: add all 6 page components
+
 ---
 
 ### Task 10: Docker + Build Integration
@@ -2904,3 +2920,15 @@ Expected: Both return valid JSON
 ```bash
 docker stop harnessx-web-test && docker rm harnessx-web-test
 ```
+
+✅ **Task 10 completed** at `0657c05` — feat: Docker integration and build scripts
+
+## Post-Implementation Fixes
+
+| Fix | Commit | Description |
+|-----|--------|-------------|
+| Real LLM connection | `3615a2d` | feat: connect Web UI to real LLM with mock/real toggle |
+| Credential sharing | `f861673` | fix: send API key directly from frontend to task runner |
+| Configurable API endpoint | `59a4c74` | feat: configurable API endpoint + file change tracking |
+| Agent loop execution | `7dd558c` | fix: Agent loop now executes tools with guardrail and observation |
+| README instructions | `9429b83` | docs: fix README install instructions (local usage, not npm global) |
