@@ -4,7 +4,7 @@ import './TaskRunner.css'
 
 interface StreamEvent {
   type: string
-  data: Record<string, unknown>
+  data: unknown
 }
 
 interface LogEntry {
@@ -49,16 +49,16 @@ export default function TaskRunner() {
 
         switch (type) {
           case 'thought':
-            entry.content = String(data.content || '')
+            entry.content = String((data as Record<string, unknown>).content || '')
             break
           case 'guardrail':
-            entry.content = `护栏: ${data.action === 'allow' ? '✅ 允许' : '❌ 拦截'} · ${data.reason || ''}`
+            entry.content = `护栏: ${(data as Record<string, unknown>).action === 'allow' ? '✅ 允许' : '❌ 拦截'} · ${(data as Record<string, unknown>).reason || ''}`
             break
           case 'observation':
-            entry.content = String(data.output || '')
+            entry.content = String((data as Record<string, unknown>).output || '')
             break
           case 'complete':
-            entry.content = data.success ? '✅ 任务完成' : '❌ 任务失败'
+            entry.content = (data as Record<string, unknown>).success ? '✅ 任务完成' : '❌ 任务失败'
             setResult(data as Record<string, unknown>)
             setRunning(false)
             break
