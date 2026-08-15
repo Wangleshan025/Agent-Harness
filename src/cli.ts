@@ -66,8 +66,8 @@ program
     // 初始化治理护栏
     const guardrail = new Guardrail(config)
 
-    // 创建 Agent
-    const agent = new Agent(llm, config)
+    // 创建 Agent（传入工具注册表和护栏，实现完整循环）
+    const agent = new Agent(llm, config, undefined, registry, guardrail)
 
     console.log(`\n🔧 HarnessX — Running task: "${task}"\n`)
 
@@ -83,6 +83,20 @@ program
     } else {
       console.log(`\n❌ Task failed after ${result.totalIterations} iterations`)
       console.log(`Reason: ${result.summary}`)
+    }
+
+    // 详细输出：显示每一步的 action + observation
+    if (options.verbose && result.turns.length > 0) {
+      console.log(`\n📋 Execution log:`)
+      for (const turn of result.turns) {
+        console.log(`  [#${turn.iteration}] ${turn.action.type}`)
+        console.log(`    params: ${JSON.stringify(turn.action.params)}`)
+        if (turn.observation.error) {
+          console.log(`    ❌ error: ${turn.observation.error}`)
+        } else {
+          console.log(`    ✅ output: ${turn.observation.output.slice(0, 200)}`)
+        }
+      }
     }
   })
 

@@ -1,7 +1,9 @@
 import { LLMProvider } from './llm.js'
-import { HarnessConfig, DEFAULT_CONFIG, Action, Observation, Turn, Memory } from './types.js'
+import { HarnessConfig, DEFAULT_CONFIG, Action, Observation, Turn, Memory, GuardrailResult } from './types.js'
 import { buildContext } from './context-builder.js'
 import { parseAction } from './action-parser.js'
+import { ToolRegistry } from '../tools/registry.js'
+import { Guardrail } from '../governance/index.js'
 
 export interface AgentResult {
   success: boolean
@@ -14,11 +16,21 @@ export class Agent {
   private llm: LLMProvider
   private config: HarnessConfig
   private memory?: Memory
+  private toolRegistry?: ToolRegistry
+  private guardrail?: Guardrail
 
-  constructor(llm: LLMProvider, config?: Partial<HarnessConfig>, memory?: Memory) {
+  constructor(
+    llm: LLMProvider,
+    config?: Partial<HarnessConfig>,
+    memory?: Memory,
+    toolRegistry?: ToolRegistry,
+    guardrail?: Guardrail,
+  ) {
     this.llm = llm
     this.config = { ...DEFAULT_CONFIG, ...config }
     this.memory = memory
+    this.toolRegistry = toolRegistry
+    this.guardrail = guardrail
   }
 
   async runTask(task: string): Promise<AgentResult> {
@@ -26,20 +38,19 @@ export class Agent {
     let consecutiveSameAction = 0
     let lastActionType = ''
 
-    // 限制最大迭代次数
     const maxIter = this.config.maxIterations
 
     for (let i = 0; i < maxIter; i++) {
-      // 1. 构建上下文
+      // 1. Build context with history
       const messages = buildContext(task, turns, this.memory)
 
-      // 2. 调用 LLM
+      // 2. Call LLM
       const response = await this.llm.chat(messages)
 
-      // 3. 解析 Action
+      // 3. Parse actions
       const actions = parseAction(response)
 
-      // 4. 如果没有 Action，认为任务完成
+      // 4. If no actions, task is complete
       if (actions.length === 0) {
         return {
           success: true,
@@ -49,7 +60,7 @@ export class Agent {
         }
       }
 
-      // 5. 检测循环
+      // 5. Detect loops (same action type 3 times consecutively)
       if (actions[0].type === lastActionType) {
         consecutiveSameAction++
       } else {
@@ -66,12 +77,45 @@ export class Agent {
         }
       }
 
-      // 注意：这里只生成 Action 占位，实际执行由 ToolRegistry 完成
-      // 在当前任务中，我们仅验证主循环的流程控制逻辑
-      // 实际的 Action 执行由外部注入
+      // 6. Execute each action (with guardrail + tool registry if available)
+      for (const action of actions) {
+        // 6a. Guardrail check
+        if (this.guardrail) {
+          const guardResult: GuardrailResult = await this.guardrail.check(action)
+          if (guardResult.action === 'block') {
+            turns.push({
+              action,
+              observation: {
+                actionId: action.id,
+                success: false,
+                output: '',
+                error: `Blocked by guardrail: ${guardResult.reason}`,
+                timestamp: Date.now(),
+              },
+              iteration: i + 1,
+            })
+            continue
+          }
+        }
 
-      // 如果没有 observation（在独立测试中），创建占位
-      // 完整集成中，ToolRegistry 会填充 observation
+        // 6b. Execute tool
+        if (this.toolRegistry) {
+          const observation = await this.toolRegistry.execute(action)
+          turns.push({ action, observation, iteration: i + 1 })
+        } else {
+          // No tool registry: create a placeholder observation (for backward compat)
+          turns.push({
+            action,
+            observation: {
+              actionId: action.id,
+              success: true,
+              output: `[Mock] Tool ${action.type} would execute with params: ${JSON.stringify(action.params)}`,
+              timestamp: Date.now(),
+            },
+            iteration: i + 1,
+          })
+        }
+      }
     }
 
     return {
