@@ -18,6 +18,8 @@
   },
   "files": ["dist"],
   "scripts": {
+    "build:web": "cd client && npm install && npm run build",
+    "build:all": "npm run build && npm run build:web",
     "build": "tsup",
     "dev": "tsup --watch",
     "test": "vitest run",

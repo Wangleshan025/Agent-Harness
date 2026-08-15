@@ -1,6 +1,8 @@
-node_modules/
-dist/
-*.enc
-.git/
-coverage/
-tests/
+node_modules
+dist
+.git
+*.md
+tests
+client/node_modules
+client/src
+server/node_modules
