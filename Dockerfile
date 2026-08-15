@@ -21,18 +21,19 @@ WORKDIR /workspace
 # Install tsx for running the server (TypeScript source)
 RUN npm install -g tsx
 
-# Core library
+# Core library (compiled output + source for tsx server imports)
 COPY --from=builder-core /app/dist ./dist
+COPY --from=builder-core /app/src ./src
 COPY --from=builder-core /app/package.json ./
 
 # Web UI static files
 COPY --from=builder-web /app/client/dist ./client/dist
 
-# Server source (imports from ../../src/ which are bundled in dist/)
+# Server source
 COPY server/ ./server/
 RUN cd server && npm install --production
 
 EXPOSE 3000
 
-# Start the Web UI server (uses tsx for TypeScript execution)
-CMD ["npx", "tsx", "server/index.ts"]
+# Start the Web UI server
+CMD ["tsx", "server/index.ts"]
