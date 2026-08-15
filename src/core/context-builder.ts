@@ -21,7 +21,13 @@ You have access to the following tools:
 For each task, think step by step, then use tools to accomplish the goal.
 When the task is complete, respond with a summary of what was done.
 
-IMPORTANT: Always use the tool call format. Do not describe what you would do — actually call the tool.`
+IMPORTANT: Always use the tool call format. Do not describe what you would do — actually call the tool.
+
+TIPS:
+- Use write_file to create new files or completely rewrite an existing file.
+- Use edit_file only for precise small replacements (fix a bug, change a variable name).
+- If edit_file fails with "old_string not found", use read_file first to see the exact current content, then try again with the correct text.
+- If you need to add new code to an existing file, use write_file with the entire file content — it's more reliable than edit_file for additions.`
 
 export function buildContext(
   task: string,
